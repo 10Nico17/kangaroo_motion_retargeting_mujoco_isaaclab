@@ -132,10 +132,31 @@ record_isaaclab() {
         --record-frames 112 --record-width 1280 --record-height 720
 }
 
+show_newton() {
+    [[ -f "${PROTO_MOTION}" ]] || { echo "Run ./commands.sh convert first." >&2; exit 1; }
+    sync_overlay
+    run_vendor examples/motion_libs_visualizer.py \
+        --motion_files "${PROTO_MOTION}" \
+        --robot kangaroo --simulator newton \
+        --hide-markers --in-place --camera-view front
+}
+
+record_newton() {
+    [[ -f "${PROTO_MOTION}" ]] || { echo "Run ./commands.sh convert first." >&2; exit 1; }
+    sync_overlay
+    mkdir -p "${MEDIA_DIR}"
+    run_vendor examples/motion_libs_visualizer.py \
+        --motion_files "${PROTO_MOTION}" \
+        --robot kangaroo --simulator newton \
+        --hide-markers --in-place --camera-view front \
+        --record-video "${MEDIA_DIR}/kangaroo_arm_newton.mp4" \
+        --record-frames 112
+}
+
 make_gifs() {
     mkdir -p "${MEDIA_DIR}"
     local name
-    for name in kangaroo_arm_mapping_before kangaroo_arm_retargeted kangaroo_arm_isaaclab
+    for name in kangaroo_arm_mapping_before kangaroo_arm_retargeted kangaroo_arm_isaaclab kangaroo_arm_newton
     do
         [[ -f "${MEDIA_DIR}/${name}.mp4" ]] || { echo "Missing ${name}.mp4" >&2; exit 1; }
         ffmpeg -y -i "${MEDIA_DIR}/${name}.mp4" \
@@ -159,7 +180,9 @@ Usage: ./commands.sh COMMAND
   convert       convert the optimized NPZ to ProtoMotions .motion
   isaaclab      play the converted motion in IsaacLab
   isaac-video   record one IsaacLab loop as MP4
-  gifs          convert all three MP4 files to README GIFs
+  newton        play the converted motion in Newton
+  newton-video  record one front-view Newton loop as MP4
+  gifs          convert all four MP4 files to README GIFs
 EOF
 }
 
@@ -175,8 +198,9 @@ case "${1:-help}" in
     convert) convert_to_proto ;;
     isaaclab) show_isaaclab ;;
     isaac-video) record_isaaclab ;;
+    newton) show_newton ;;
+    newton-video) record_newton ;;
     gifs) make_gifs ;;
     help|-h|--help) usage ;;
     *) echo "Unknown command: $1" >&2; usage >&2; exit 2 ;;
 esac
-

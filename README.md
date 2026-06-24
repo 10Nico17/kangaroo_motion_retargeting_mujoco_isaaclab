@@ -1,4 +1,4 @@
-# Kangaroo Retargeting for MuJoCo and IsaacLab
+# Kangaroo Retargeting for MuJoCo, IsaacLab and Newton
 
 Retargeting semantischer SOMA23-Keypoints auf den Kangaroo-Roboter mit
 geschlossenen Beinmechanismen. Dieses Repository enthält den eigenen
@@ -24,6 +24,14 @@ Kangaroo-Overlay hinein.
 ### Exportierte Kangaroo-Motion
 
 ![IsaacLab playback](docs/media/kangaroo_arm_isaaclab.gif)
+
+## Newton
+
+### Exportierte Kangaroo-Motion – Frontansicht
+
+![Newton playback](docs/media/kangaroo_arm_newton.gif)
+
+[Newton MP4 öffnen](docs/media/kangaroo_arm_newton.mp4)
 
 ## Enthaltene Roboterdateien
 
@@ -57,6 +65,27 @@ chmod +x setup_upstream.sh commands.sh
 ProtoMotions ist auf Commit
 `b93d29ce731812af7d0ab29c744fa1396e26a8f9` gepinnt.
 
+### Separate Newton-Umgebung
+
+Für Newton wird eine getrennte Umgebung empfohlen. Eine RTX-50-Serie benötigt
+ein PyTorch-Wheel mit CUDA 12.8 und `sm_120`-Unterstützung:
+
+```bash
+conda create -n env_newton python=3.11 -y
+conda activate env_newton
+
+python -m pip install --upgrade pip
+python -m pip install \
+    torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 \
+    --index-url https://download.pytorch.org/whl/cu128
+python -m pip install "newton[examples]==1.0.0"
+
+cd .vendor/ProtoMotions
+python -m pip install -e .
+python -m pip install -r requirements_newton.txt
+cd ../..
+```
+
 ## Pipeline
 
 ```text
@@ -70,7 +99,7 @@ MuJoCo-Retargeting (.npz)
         v
 ProtoMotions-Motion (.motion)
         |
-        +--> IsaacLab-Viewer und MP4
+        +--> IsaacLab- und Newton-Viewer/MP4
         |
         v
 Mimic-Training
@@ -169,7 +198,33 @@ overlay/protomotions/data/assets/Kangaroo/usd/kangaroo_grippers_ias/
 ./commands.sh isaac-video
 ```
 
-### 11. MP4s in GitHub-GIFs konvertieren
+### 11. Motion in Newton von vorne ansehen
+
+In der Newton-Umgebung ausführen:
+
+```bash
+conda activate env_newton
+./commands.sh newton
+```
+
+Newton lädt direkt das Kangaroo-MJCF. Die Policy besitzt 28 Aktionen, während
+Newton alle 32 Gelenkzustände einschließlich der vier passiven Closed-Chain-
+Gelenke simuliert.
+
+### 12. Newton-Frontvideo automatisch aufnehmen
+
+```bash
+conda activate env_newton
+./commands.sh newton-video
+```
+
+Erzeugt eine vollständige 112-Frame-Schleife:
+
+```text
+docs/media/kangaroo_arm_newton.mp4
+```
+
+### 13. MP4s in GitHub-GIFs konvertieren
 
 ```bash
 ./commands.sh gifs
@@ -194,6 +249,8 @@ overlay/protomotions/data/assets/Kangaroo/usd/kangaroo_grippers_ias/
 | `convert` | NPZ nach ProtoMotions `.motion` konvertieren |
 | `isaaclab` | Motion in IsaacLab anzeigen |
 | `isaac-video` | IsaacLab-MP4 aufnehmen |
+| `newton` | Motion von vorne in Newton anzeigen |
+| `newton-video` | Newton-Frontvideo automatisch aufnehmen |
 | `gifs` | MP4s in README-GIFs umwandeln |
 
 ## Relevante Skripte
@@ -207,6 +264,7 @@ overlay/examples/visualize_kangaroo_retarget_mapping_mujoco.py
 overlay/examples/render_kangaroo_retarget_videos_mujoco.py
 overlay/examples/visualize_kangaroo_ias_isaaclab.py
 overlay/examples/motion_libs_visualizer.py
+overlay/protomotions/simulator/newton/simulator.py
 overlay/usd_convert/convert_kangaroo_ias.py
 overlay/usd_convert/configure_kangaroo_ias_usd.py
 ```

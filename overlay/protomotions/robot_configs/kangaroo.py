@@ -18,6 +18,7 @@ from protomotions.simulator.isaaclab.config import (
     IsaacLabPhysXParams,
     IsaacLabSimParams,
 )
+from protomotions.simulator.newton.config import NewtonSimParams
 
 
 # Ordered exactly like the kinematic DOFs, excluding the four passive linkage
@@ -180,6 +181,10 @@ class KangarooRobotConfig(RobotConfig):
                     num_velocity_iterations=4,
                     max_depenetration_velocity=1.0,
                 ),
-            )
+            ),
+            newton=NewtonSimParams(
+                fps=200,
+                decimation=4,
+            ),
         )
     )

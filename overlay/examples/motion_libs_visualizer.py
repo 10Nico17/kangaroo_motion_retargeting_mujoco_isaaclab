@@ -555,21 +555,24 @@ class MotionVisualizerSmoothness:
         self.simulator._initialize_with_markers(self.viz_markers)
 
         if args.record_video is not None:
-            if simulator_type != "isaaclab":
-                raise ValueError("--record-video is currently supported only by IsaacLab")
+            if simulator_type not in {"isaaclab", "newton"}:
+                raise ValueError(
+                    "--record-video is currently supported by IsaacLab and Newton"
+                )
             if headless:
-                raise ValueError("--record-video requires a visible IsaacLab viewport")
-            try:
-                from omni.kit.viewport.utility import get_active_viewport
+                raise ValueError("--record-video requires a visible simulator viewport")
+            if simulator_type == "isaaclab":
+                try:
+                    from omni.kit.viewport.utility import get_active_viewport
 
-                get_active_viewport().set_texture_resolution(
-                    (args.record_width, args.record_height)
-                )
-                print(
-                    f"Recording resolution: {args.record_width}x{args.record_height}"
-                )
-            except Exception as error:
-                print(f"Warning: could not set recording resolution: {error}")
+                    get_active_viewport().set_texture_resolution(
+                        (args.record_width, args.record_height)
+                    )
+                    print(
+                        f"Recording resolution: {args.record_width}x{args.record_height}"
+                    )
+                except Exception as error:
+                    print(f"Warning: could not set recording resolution: {error}")
 
         if simulator_type == "isaaclab" and args.camera_view != "default":
             camera_views = {
@@ -583,6 +586,15 @@ class MotionVisualizerSmoothness:
                 target = [0.0, center_y, 0.9]
             self.simulator._fixed_camera_view = (eye, target)
             print(f"IsaacLab fixed camera view: {args.camera_view}")
+        elif simulator_type == "newton" and args.camera_view != "default":
+            camera_offsets = {
+                # Kangaroo's forward axis points along +X. Place the camera on
+                # +X and look back toward the torso for a true front view.
+                "front": ([4.0, 0.0, 1.0], [0.0, 0.0, 0.2]),
+                "side": ([0.0, -5.0, 1.0], [0.0, 0.0, 0.2]),
+            }
+            self.simulator._fixed_camera_offsets = camera_offsets[args.camera_view]
+            print(f"Newton fixed camera view: {args.camera_view}")
 
         print(f"Loaded {robot_name} robot using {simulator_type}")
         print(f"Visualizing bodies: {self.robot_spec.viz_bodies}")
@@ -1055,7 +1067,8 @@ class MotionVisualizerSmoothness:
             self.current_frame = 0
             self.simulator._toggle_video_record()
             print(
-                f"Automatic IsaacLab recording: {recording_limit} frames -> "
+                f"Automatic {self.simulator_type} recording: "
+                f"{recording_limit} frames -> "
                 f"{args.record_video}"
             )
 
@@ -1100,7 +1113,7 @@ class MotionVisualizerSmoothness:
                 self._set_robot_pose(dof_pos, rigid_body_pos, rigid_body_rot)
                 self._draw_source_skeleton(playback_frame)
                 if first_playback_step:
-                    print("First motion pose written to IsaacLab")
+                    print(f"First motion pose written to {self.simulator_type}")
 
                 # Advance frame with skip for fast playback
                 self.current_frame += frame_skip
@@ -1136,10 +1149,13 @@ class MotionVisualizerSmoothness:
                             f"IsaacLab recording was not created: {generated_video}"
                         )
                     shutil.move(str(generated_video), str(args.record_video))
-                    print(f"Automatic IsaacLab video saved: {args.record_video}")
+                    print(
+                        f"Automatic {self.simulator_type} video saved: "
+                        f"{args.record_video}"
+                    )
                     return
             if first_playback_step:
-                print("First IsaacLab playback step completed")
+                print(f"First {self.simulator_type} playback step completed")
                 first_playback_step = False
 
             step_count += 1
