@@ -33,6 +33,34 @@ Kangaroo-Overlay hinein.
 
 [Newton MP4 öffnen](docs/media/kangaroo_arm_newton.mp4)
 
+## Jog-Start mit Follow-Kamera
+
+Der zweite Beispielclip ist `jog_ff_start_180_R_002__A531` aus SOMA23/BONES
+(110 Frames bei 30 Hz). Anders als die Arm-Demo enthält er echte
+Root-Translation. Die MuJoCo- und IsaacLab-Kameras folgen deshalb der Base,
+statt am Weltursprung stehen zu bleiben.
+
+### MuJoCo – Kangaroo und Quellskelett
+
+![MuJoCo jog retargeting](docs/media/kangaroo_jog_mujoco.gif)
+
+[MuJoCo MP4 öffnen](docs/media/kangaroo_jog_mujoco.mp4)
+
+### IsaacLab – Kangaroo und Quellskelett
+
+![IsaacLab jog playback](docs/media/kangaroo_jog_isaaclab.gif)
+
+[IsaacLab MP4 öffnen](docs/media/kangaroo_jog_isaaclab.mp4)
+
+### Newton – Kangaroo mit Root-Follow-Kamera
+
+![Newton jog playback](docs/media/kangaroo_jog_newton.gif)
+
+[Newton MP4 öffnen](docs/media/kangaroo_jog_newton.mp4)
+
+Newton rendert in diesem Viewer derzeit nur den retargeteten Roboter. Das
+zusätzliche Quellskelett ist in MuJoCo und IsaacLab sichtbar.
+
 ## Enthaltene Roboterdateien
 
 ```text
@@ -230,6 +258,79 @@ docs/media/kangaroo_arm_newton.mp4
 ./commands.sh gifs
 ```
 
+## Jog-Pipeline und Mimic-Training
+
+Die SOMA23-Keypoints werden aus Lizenzgründen nicht versioniert. Lege die
+lokale Datei hier ab:
+
+```text
+sample_data/231121_jog_ff_start_180_R_002__A531_keypoints.npy
+```
+
+Danach kann die gesamte Datenpipeline ausgeführt werden:
+
+```bash
+conda activate env_isaaclab
+./commands.sh jog-pipeline
+```
+
+Einzelschritte und Viewer:
+
+```bash
+./commands.sh jog-retarget
+./commands.sh jog-view
+./commands.sh jog-convert
+./commands.sh jog-package
+./commands.sh jog-isaaclab
+
+conda activate env_newton
+./commands.sh jog-newton
+```
+
+Die drei Videos und GIFs werden mit folgenden Befehlen neu erzeugt:
+
+```bash
+conda activate env_isaaclab
+./commands.sh jog-mujoco-video
+./commands.sh jog-isaac-video
+
+conda activate env_newton
+./commands.sh jog-newton-video
+
+./commands.sh jog-gifs
+```
+
+Das stabile IsaacLab-Mimic-Training nutzt 256 Environments, 1024 Samples pro
+Minibatch und eine reduzierte Actor-Lernrate:
+
+```bash
+conda activate env_isaaclab
+./commands.sh jog-train
+```
+
+Der ausgeschriebene Trainingsaufruf lautet:
+
+```bash
+cd .vendor/ProtoMotions
+python protomotions/train_agent.py \
+    --robot-name kangaroo \
+    --simulator isaaclab \
+    --experiment-path examples/experiments/mimic/mlp.py \
+    --experiment-name kangaroo_jog_mimic_20m \
+    --motion-file ../../output/motion_lib/kangaroo_jog_start.pt \
+    --num-envs 256 \
+    --batch-size 1024 \
+    --ngpu 1 \
+    --seed 0 \
+    --training-max-steps 20000000 \
+    --overrides agent.model.actor_optimizer.lr=5e-6
+```
+
+Vor dem Start sollte `nvidia-smi` zeigen, dass keine alten IsaacLab-Viewer
+mehrere Gigabyte VRAM belegen. Ein identischer erneuter Aufruf setzt über
+`.vendor/ProtoMotions/results/kangaroo_jog_mimic_20m/last.ckpt` automatisch
+fort.
+
 ## Kommandoübersicht
 
 ```bash
@@ -252,6 +353,13 @@ docs/media/kangaroo_arm_newton.mp4
 | `newton` | Motion von vorne in Newton anzeigen |
 | `newton-video` | Newton-Frontvideo automatisch aufnehmen |
 | `gifs` | MP4s in README-GIFs umwandeln |
+| `jog-pipeline` | Jog-Keypoints retargeten, konvertieren und paketieren |
+| `jog-view` | optimierten Jog in MuJoCo mit Skelett anzeigen |
+| `jog-isaaclab` | Jog in IsaacLab mit Skelett und Follow-Kamera anzeigen |
+| `jog-newton` | Jog in Newton mit Root-Follow-Kamera anzeigen |
+| `jog-*-video` | Videos für MuJoCo, IsaacLab oder Newton erzeugen |
+| `jog-gifs` | die drei Jog-MP4s in README-GIFs umwandeln |
+| `jog-train` | 20M-Mimic-Training mit 256 Environments starten |
 
 ## Relevante Skripte
 

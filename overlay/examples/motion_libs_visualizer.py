@@ -112,6 +112,11 @@ parser.add_argument(
     help="Set a reproducible initial camera view in IsaacLab.",
 )
 parser.add_argument(
+    "--follow-camera",
+    action="store_true",
+    help="Move the selected fixed camera and source skeleton with the robot root.",
+)
+parser.add_argument(
     "--source-keypoints",
     type=Path,
     default=None,
@@ -635,11 +640,13 @@ class MotionVisualizerSmoothness:
         print("Pre-computing smoothness metrics for initial motion...")
         self._precompute_motion_smoothness()
 
-    def _draw_source_skeleton(self, frame: int) -> None:
+    def _draw_source_skeleton(self, frame: int, root_position=None) -> None:
         """Draw the synchronized SOMA23 source skeleton beside the robot."""
         if self.source_positions is None or self.source_draw is None:
             return
-        points = self.source_positions[frame % len(self.source_positions)]
+        points = self.source_positions[frame % len(self.source_positions)].copy()
+        if args.follow_camera and root_position is not None:
+            points[:, :2] += np.asarray(root_position[:2], dtype=np.float32)
         starts = [tuple(points[start]) for start, _ in SOURCE_SKELETON_EDGES]
         ends = [tuple(points[end]) for _, end in SOURCE_SKELETON_EDGES]
         self.source_draw.clear_points()
@@ -1111,7 +1118,28 @@ class MotionVisualizerSmoothness:
 
                 # Set robot pose
                 self._set_robot_pose(dof_pos, rigid_body_pos, rigid_body_rot)
-                self._draw_source_skeleton(playback_frame)
+                root_position = rigid_body_pos[0, 0].detach().cpu().numpy()
+                if args.follow_camera and args.camera_view != "default":
+                    if self.simulator_type == "isaaclab":
+                        center_y = (
+                            0.5 * args.source_offset_y
+                            if args.source_keypoints is not None
+                            else 0.0
+                        )
+                        if args.camera_view == "front":
+                            eye_offset = np.asarray([4.5, center_y, 1.5])
+                            target_offset = np.asarray([0.0, center_y, 0.9])
+                        else:
+                            eye_offset = np.asarray([0.0, 3.5, 1.35])
+                            target_offset = np.asarray([0.0, 0.0, 0.9])
+                        follow_offset = np.asarray(
+                            [root_position[0], root_position[1], 0.0]
+                        )
+                        self.simulator._fixed_camera_view = (
+                            (eye_offset + follow_offset).tolist(),
+                            (target_offset + follow_offset).tolist(),
+                        )
+                self._draw_source_skeleton(playback_frame, root_position)
                 if first_playback_step:
                     print(f"First motion pose written to {self.simulator_type}")
 

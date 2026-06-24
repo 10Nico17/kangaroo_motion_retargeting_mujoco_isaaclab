@@ -249,6 +249,14 @@ def render_optimized_video(
             source_points[:, 1] += args.source_offset_y
             robot_points = data.xpos[target_body_ids].copy()
 
+            # Keep travelling motions framed instead of leaving the camera at
+            # the world origin.  The source skeleton receives the same world
+            # translation, so the side-by-side comparison remains aligned.
+            if not args.in_place:
+                camera.lookat[:] = np.asarray(
+                    [root_pos[frame, 0], root_pos[frame, 1] + args.source_offset_y * 0.5, 0.85]
+                )
+
             renderer.update_scene(data, camera=camera)
             brighten_scene(renderer.scene)
             draw_comparison(renderer.scene, source_points, robot_points, palette)
