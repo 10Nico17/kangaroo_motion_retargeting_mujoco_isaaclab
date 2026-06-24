@@ -1,0 +1,18 @@
+.vendor/
+output/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.vscode/
+
+# Local dataset derivatives: publish only after checking the dataset license.
+sample_data/*.npy
+sample_data/*.npz
+sample_data/*.motion
+sample_data/*.pt
+
+# Temporary/importer files
+overlay/protomotions/data/assets/Kangaroo/usd/**/*.backup
+overlay/protomotions/data/assets/Kangaroo/usd/**/.asset_hash
+
